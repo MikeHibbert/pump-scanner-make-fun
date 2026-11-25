@@ -84,3 +84,42 @@ ours; signing and submitting is Father's.
 
 This file is the declaration for stage 3: file, change, reason, and the live command
 output behind each claim. Nothing above is reported from memory.
+
+## Landing attempt — the push, and why no PR URL exists
+
+Attempted live in this stage, from `/data/workspace/entries/token-radar-01`:
+
+```
+$ git push -u origin feature/work_647d5c582d-token-radar-01
+remote: Invalid username or token. Password authentication is not supported for Git operations.
+fatal: Authentication failed for 'https://github.com/MikeHibbert/pump-scanner-make-fun.git/'
+```
+
+The credential is dead, and it is dead for every repository, not only this one:
+
+```
+$ curl -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/user
+api_status=401
+{"message": "Bad credentials", ...}
+
+$ cd /data/workspace/code/andrew && git push --dry-run origin HEAD
+remote: Invalid username or token. ...
+fatal: Authentication failed for 'https://github.com/MikeHibbert/Andrew.git/'
+```
+
+`git ls-remote --heads origin` returns nothing, so the remote is unreachable for reads as
+well as writes. No pull request can be opened from here: opening one requires either a
+successful push or an authenticated API call, and both are refused with `401`.
+
+**The work is committed locally and is not lost.** Branch
+`feature/work_647d5c582d-token-radar-01`, HEAD `fe69fe1`, on top of `e2bf802` and
+`c2a933d`. The moment a live credential is supplied, the landing is two commands:
+
+```sh
+cd /data/workspace/entries/token-radar-01
+git push -u origin feature/work_647d5c582d-token-radar-01
+# then open the PR against main
+```
+
+This is a credential failure, not a work failure, and it is reported as such rather than
+worked around by committing to `main` or by inventing a PR URL.
