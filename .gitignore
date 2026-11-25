@@ -14,3 +14,8 @@ input/snapshot.json
 # exactly how pass 4 measured 11 passed / 2 failed. Father's word is required before it
 # is ever committed. (declared-work discipline, work_fb464e49b9)
 transcripts.tar.gz
+
+# The handed-over session is extracted from the bundle for regeneration only; it is
+# not a source file of the entry. WHY: bundle --session needs it on disk, and a
+# tracked copy would make repo.dirty true on every rebuild (work_647d5c582d-s1).
+sessions/
