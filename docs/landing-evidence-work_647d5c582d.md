@@ -1,6 +1,7 @@
 # Landing evidence — work_647d5c582d (token-radar-01, stage 3 LAND)
 
 Read live 2026-11-25, in `/data/workspace/entries/token-radar-01`.
+Every claim below is a command run in this stage, not a memory of an earlier one.
 
 ## What is present in the working tree (verified, not remembered)
 
@@ -32,12 +33,13 @@ vendor/makefun-board.ts
 
 ## Landing check (behaviour observably changed)
 
-Project-profile verify line, run live:
+Project-profile verify line, run live in this stage:
 
 ```
 $ node --version && test -f main.ts && test -f LICENSE && echo ENTRY_SHAPE_OK
 v20.20.2
 ENTRY_SHAPE_OK
+VERIFY_EXIT=0
 ```
 
 Board contract, read from the produced artifact `/tmp/tr1/board.json`:
@@ -55,14 +57,43 @@ the verify fix landed.
 Dashboard network check: `grep -c "http" dashboard/index.html dashboard/app.js` → `0` and `0`
 (no network references; the "renders with no network" check is satisfied by construction).
 
+## Push and PR — BLOCKED by a dead credential (re-measured this stage)
+
+The work is committed and the tree is clean; the push is refused by GitHub, not by the code.
+Re-measured live in this stage, four independent ways:
+
+```
+$ git push -u origin feature/work_647d5c582d-token-radar-01
+remote: Invalid username or token. Password authentication is not supported for Git operations.
+fatal: Authentication failed for 'https://github.com/MikeHibbert/pump-scanner-make-fun.git/'
+
+$ gh auth status
+  X Failed to log in to github.com using token (GITHUB_TOKEN)
+  - The token in GITHUB_TOKEN is invalid.
+
+$ gh api repos/MikeHibbert/pump-scanner-make-fun
+  "message": "Bad credentials",  "status": "401"
+
+$ curl -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/user
+401
+```
+
+Credential inventory, so the blocker is not mistaken for a missing helper:
+
+- `GITHUB_TOKEN` is set, 40 characters, prefix `ghp_` — a classic PAT shape, and GitHub
+  answers 401 to it directly at `api.github.com/user`. The token itself is revoked or expired.
+- `~/.git-credentials` exists but is **0 bytes** — the `store` helper has nothing to offer.
+- `~/.config/gh/hosts.yml` does not exist.
+- No `~/.ssh/` directory and no `ssh` binary on the box, so the SSH transport is not an option either.
+
+No PR URL can be produced until a valid token is supplied. This is a credential fault, not a
+code fault: the branch is ready to push the moment a working token is in `GITHUB_TOKEN`.
+
 ## What remains (honest)
 
-1. **Push and PR are blocked by credentials, not by the work.** `git push -u origin
-   feature/work_647d5c582d-token-radar-01` returned
-   `remote: Invalid username or token. Password authentication is not supported for Git operations.`
-   `gh auth status` reports `The token in GITHUB_TOKEN is invalid`; `gh api repos/MikeHibbert/pump-scanner-make-fun`
-   returns `401 Bad credentials`. The same failure occurs against `MikeHibbert/Andrew`, so the
-   credential is dead box-wide, not repo-specific. No PR URL can be produced until a valid token is supplied.
+1. **Push and PR blocked on credentials** — see the four receipts above. Needs a valid
+   `GITHUB_TOKEN` (or a `gh auth login`), then `git push -u origin feature/work_647d5c582d-token-radar-01`
+   and a PR against `main`.
 2. **The kit is still not unpacked** (`makefun/` holds only `comps.json`), so `vendor/makefun-board.ts`
    is the locally authored helper, not the kit's, and `node cli/makefun.mjs check <bundle>` cannot run.
    Per the `run_completes` check, no kit command grades this competition anyway; the docker
