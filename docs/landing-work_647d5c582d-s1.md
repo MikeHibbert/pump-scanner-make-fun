@@ -1,61 +1,67 @@
 # Landing record — work_647d5c582d-s1 (token-radar-01, slice 1/2)
 
-Written at the land stage, 2026-11-25. Every claim below is a live sighting from
-this stage, not a memory of an earlier one.
+Written at the land stage, 25 Nov 2026. Every figure below was read live in this
+stage; nothing is quoted from memory.
 
 ## What was built
 
-The token launch radar entry at `entries/token-radar-01`:
+`entries/token-radar-01` — the token launch radar entry for make.fun
+`token-radar-01`:
 
-- `main.ts` — graded entrypoint, node22, reads `--input` and writes the board.
-- `lib/model.ts` — the radar model (scoring, filtering, dossier assembly).
-- `vendor/makefun-board.ts` — the board row contract.
-- `dashboard/{index.html,app.js,app.css}` — the static dashboard.
+- `main.ts` — the graded entrypoint (node 22, no network, read-only filesystem).
+- `lib/model.ts` — the scoring/model layer.
+- `vendor/makefun-board.ts` — the board contract.
+- `dashboard/{index.html,app.js,app.css}` — the rendered radar.
 - `screenshots/{1-board,2-detail,3-filtered}.png` — captured views.
-- `input/snapshot.json` — the board snapshot the run consumes.
+- `input/snapshot.json` — the board snapshot the entry reads.
+- `transcripts.tar.gz` — the transcript bundle (`agent-fun/transcript-bundle/v1`).
 - `LICENSE` — SPDX MIT.
-- `transcripts.tar.gz` — the agent session bundle (`agent-fun/transcript-bundle/v1`).
+- `cli/makefun.mjs`, `cli/site.json` — the kit CLI, vendored so the entry is
+  self-contained.
 
-## Landing evidence (observed this stage)
+## Landing evidence (observed, this stage)
 
 | Check | Command | Observed |
 |---|---|---|
 | Entry shape | `node --version && test -f main.ts && test -f LICENSE` | `v22.23.5`, `ENTRY_SHAPE_OK` |
-| Program runs | `MAKEFUN_OUTPUT_DIR=out node main.ts --input input/snapshot.json` | exit 0; `out/` holds `board.json`, `data.js`, `dossier.json`, `dashboard/`, `screenshots/` |
-| Kit grader | `makefun check --kit /data/workspace/makefun/kit --repo . --transcripts transcripts.tar.gz` | **11 pass, 7 skip, 2 FAIL** |
-| Branch pushed | `git push origin work_647d5c582d-s1-land` | `d718d32..cda759b` |
-| Remote agrees | `git ls-remote --heads origin work_647d5c582d-s1-land` | `cda759b07054964237cfe870a84b6eb678993f1c` = local `HEAD` |
+| Bundle members | `tar tzvf transcripts.tar.gz` | `manifest.json` (2,427 B), `sessions/chat-log/session-handover.json` (19,396 B) |
+| Session is revised across messages | `grep -o '"role": *"[a-z]*"' \| sort \| uniq -c` | 10 `assistant`, 10 `user` — a file revised across assistant messages, not one finished write |
+| Kit grader | `node cli/makefun.mjs check --kit … --repo . --transcripts transcripts.tar.gz` | **11 pass, 7 skip, 2 FAIL** |
+| Branch pushed | `git push origin HEAD` | `a4f0d08..102b3bb HEAD -> feature/work_647d5c582d-token-radar-01-land-20261125` |
+| Remote ref | `git ls-remote --heads origin …` | `102b3bbd162c1f061b7f2f11bcd0b3d27175e042` |
 
-## The two failing checks, stated plainly
+## The two failures, stated plainly
 
-1. `thinking_reproduces` — the transcripts account for 0 of 12,720 counted lines
-   (0.0%, under the 30% required). The entrypoint `main.ts` has no authored line
-   in the session.
-2. `thinking_revised` — no file takes its final content from two or more
-   assistant messages.
+- `thinking_reproduces` — the transcripts account for 0 of 337,097 counted lines
+  (0.0%, under the 30% required); `main.ts` has no authored line.
+- `thinking_revised` — no file takes its final content from two or more messages
+  that write or edit it.
 
-Both are transcript-provenance checks, not program checks. The program itself
-passes every shape and run check. The cause is that the entry was written in
-earlier runs whose sessions were not captured into the bundle; the bundle holds
-one handed-over chat-log session (`sessions/chat-log/session-handover.json`,
-21 messages) that does not contain the file writes.
+Both are authorship checks over the handed-over session, not defects in the
+program. The session is a chat-log projection: it carries no tool calls, so no
+file appears as the call that wrote it and no file is revised across messages.
+The kit's own remedy is to run in a client whose sessions are recorded, or to
+hand over a session carrying the writes. Rebuilding a session from memory is
+forbidden by the requirements and has not been done.
 
-`transcripts_recorded` is a **skip**, not a pass: the session was handed over by
-the agent rather than recorded by its harness, so the entry is ranked where it
-scores but takes no paid place. That is a property of the client, not of the code.
+## Known gap, recorded honestly
 
-## What remains
+The bundle's `manifest.repo.commit` reads `c93a4f48fcdd3d18b827995f8fc3c9840ea0ad72`,
+while HEAD is `102b3bb`. The bundle was rebuilt at `c93a4f4` and the commit that
+carried it is `102b3bb`, so the manifest names its parent. The submitted
+`commit_sha` must therefore be `c93a4f4` — or the bundle must be rebuilt once
+more after the final commit. This is a submission-time decision, not a code
+change.
 
-- Regenerate the bundle from a session that actually contains the file writes, so
-  `thinking_reproduces` and `thinking_revised` can pass. This needs a recorded
-  harness session, not a handover.
-- **Father gate 1:** the account's Solana wallet for the escrowed prize.
-- **Father gate 2:** signing the entry message over the bundle
-  (`entry_signature`, 600 s freshness) — `thinking_committed` is a skip until then.
+## Remaining — the two Father gates
 
-## Why this file exists
+1. The account's Solana wallet for the escrowed prize.
+2. Signing the entry message over the bundle (`entry_signature`, 600 s
+   freshness, 60 s skew).
 
-Declared-work discipline (Father directive 19 Sep 2026, work_fb464e49b9,
-`docs/declared-work-discipline.md`): work in the open, declare each change, and
-never report work as done from memory. This record is the landing evidence for
-this item, and it names the two failures rather than reporting a clean pass.
+The push credential is not a gate: it is verified live above. The remote
+`MikeHibbert/pump-scanner-make-fun` was empty before this push, so this branch is
+the first — there is no `origin/main` to compare against, and that is not a
+failure.
+
+Entries close `2026-12-14T10:00:00Z`; result due `2026-12-28T22:10:00Z`.
