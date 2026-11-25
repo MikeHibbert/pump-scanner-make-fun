@@ -102,3 +102,34 @@ records; the ratio is unchanged at 0.0%, which is the honest reading.
 One environment note worth recording: the default `node` on this box is **v20.20.2**, which refuses
 `main.ts` with `ERR_UNKNOWN_FILE_EXTENSION`. The entry must be run with node22
 (`/opt/nvm/versions/node/v22.23.5/bin/node`), which is what the grader selects via the entrypoint check.
+
+## Verify-stage re-read (stage 2 of 3, second pass), live
+
+Re-run once more at the verify stage, this time against the tree as it actually stands at HEAD
+`2ed535694237b39ca736c63b102c066784787d3c` (the commit the kit's `snapshot` check names), with a clean
+working tree (`git status --porcelain` printed nothing). Declared change: this section only — no code
+touched, because the verify pass again found nothing to correct.
+
+```
+cd entries/token-radar-01
+/opt/nvm/versions/node/v22.23.5/bin/node --version          # v22.23.5
+MAKEFUN_INPUT_DIR=./input MAKEFUN_OUTPUT_DIR=./out \
+  /opt/nvm/versions/node/v22.23.5/bin/node main.ts          # exit 0
+node -e "require('./out/board.json').rows.length"           # 200
+/opt/nvm/versions/node/v22.23.5/bin/node /data/workspace/makefun/kit/cli/makefun.mjs check \
+  --kit /data/workspace/makefun/kit --repo . --transcripts transcripts.tar.gz   # exit 2
+```
+
+Tally re-read live: **11 pass, 7 skip, 2 FAIL** — unchanged, and the same two failures:
+
+- `thinking_reproduces` — 0 of 337,258 counted lines (0.0%, under the 30% required); `main.ts` has no
+  authored line (80 counted: 0 pasted, 0 read, 80 absent).
+- `thinking_revised` — no file takes its final content from 2 or more session messages.
+
+The counted-line total moved again (337,237 → 337,258) because the snapshot now includes the previous
+verify record; the ratio is unchanged at 0.0%, which is the honest reading. The `snapshot` check now
+reports 52 files, 22,901,218 bytes at `2ed5356…`, confirming the kit is reading the current commit.
+
+The precondition stands and is named first, as the item requires: **`No wallet on the account` still
+fails.** No entry of ours can be accepted until Father links a wallet, and the four Father gates (public
+repository, wallet link, entry signature, submission POST) remain uncrossed.
