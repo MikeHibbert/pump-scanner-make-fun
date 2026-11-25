@@ -78,3 +78,51 @@ run from inside the unpacked kit, then `check --transcripts transcripts.tar.gz`.
 
 `git status --porcelain` was empty before this file was written; this file is the only
 new artefact and is committed on its own.
+
+## 6. Landing re-confirmation, second pass (2026-11-25, this run)
+
+Read live in this stage, not from memory:
+
+```
+$ cd entries/token-radar-01 && node --version && test -f main.ts && test -f LICENSE && echo ENTRY_SHAPE_OK
+v20.20.2
+ENTRY_SHAPE_OK
+
+$ MAKEFUN_INPUT_DIR="$PWD/input" MAKEFUN_OUTPUT_DIR=/tmp/land1 andrew-node main.ts
+RUN_EXIT=0
+board.json      472614 bytes
+data.js          64735 bytes
+dossier.json    705011 bytes
+dashboard/      present
+screenshots/    present
+rows 200
+```
+
+The landing check holds: the radar produces a 200-row board from the sealed snapshot.
+
+## 7. Push refused — no PR possible from this container
+
+```
+$ git push -u origin feature/work_647d5c582d-token-radar-01
+PUSH_EXIT=128
+remote: Invalid username or token. Password authentication is not supported for Git operations.
+fatal: Authentication failed for 'https://github.com/MikeHibbert/pump-scanner-make-fun.git/'
+
+$ curl -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/user
+HTTP=401
+{"message": "Bad credentials", ...}
+```
+
+`GITHUB_TOKEN` is present (40 chars) but dead. `~/.git-credentials` is a 0-byte file.
+The branch is committed locally at `13d1e9d` and cannot be pushed, so no pull request
+can be opened from here. This is a credential gate for Father, not a code defect.
+
+## 8. What remains
+
+1. **Father: link a wallet.** The live check `No wallet on the account` fails; no entry
+   of ours can be accepted until it is linked. This is the precondition named in the item.
+2. **Father: supply a live GitHub token** (or push the branch himself) so the PR can open.
+3. **`transcripts_present`** — the one failing grader check. `tools/project-session.mjs`
+   is committed and ready; the bundle run is the remaining step.
+4. **Father-only gates, not crossed:** making the repo public, linking the wallet,
+   signing `entry_message`, and the submission POST.
