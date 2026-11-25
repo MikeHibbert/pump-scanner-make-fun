@@ -72,3 +72,33 @@ value range from $598M to $1.04M — so the ranking discriminates rather than co
 
 `manifest.repo.commit` must equal the submitted 40-character `commit_sha`. The bundle has to be rebuilt
 **after** the final commit, which is stage 3's work, not this stage's.
+
+## Verify-stage re-read (stage 2 of 3), live
+
+Re-run at the verify stage against the committed tree at `88d276a`, so the tally above is confirmed
+rather than remembered. Declared change: this section only — no code touched, because the verify pass
+found nothing to correct.
+
+```
+cd entries/token-radar-01
+/opt/nvm/versions/node/v22.23.5/bin/node --version          # v22.23.5
+MAKEFUN_INPUT_DIR=./input MAKEFUN_OUTPUT_DIR=./out \
+  /opt/nvm/versions/node/v22.23.5/bin/node main.ts          # exit 0
+node -e "require('./out/board.json').rows.length"           # 200
+/opt/nvm/versions/node/v22.23.5/bin/node /data/workspace/makefun/kit/cli/makefun.mjs check \
+  --kit /data/workspace/makefun/kit --repo . --transcripts transcripts.tar.gz   # exit 2
+```
+
+The kit's exit code is 2 because two checks FAIL; that is the expected, already-recorded state, not a
+regression. The re-read tally is **11 pass, 7 skip, 2 FAIL**, with the same two failures:
+
+- `thinking_reproduces` — 0 of 337,237 counted lines (0.0%, under the 30% required); `main.ts` has no
+  authored line (80 counted: 0 pasted, 0 read, 80 absent).
+- `thinking_revised` — no file takes its first content from a later session message.
+
+The counted-line total moved from 337,102 to 337,237 because the snapshot now includes the slice-2
+records; the ratio is unchanged at 0.0%, which is the honest reading.
+
+One environment note worth recording: the default `node` on this box is **v20.20.2**, which refuses
+`main.ts` with `ERR_UNKNOWN_FILE_EXTENSION`. The entry must be run with node22
+(`/opt/nvm/versions/node/v22.23.5/bin/node`), which is what the grader selects via the entrypoint check.
