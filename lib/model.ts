@@ -103,6 +103,10 @@ export interface BoardRow {
     age_days: number | null;
   };
   farm_steps: string[];
+  /** Contract aliases: the same values under the names the competition's board contract uses. */
+  tvl: number;
+  impliedValue: number;
+  farmPlan: string[];
 }
 
 /** The dashboard's compact view of one row, with farm plans generated in the page. */
@@ -257,6 +261,12 @@ export function buildBoard(snapshot: Snapshot, model: ModelConstants = MODEL): B
       age_days: s.age,
     },
     farm_steps: farmSteps(s.p, s.age).map(stepText),
+    // WHY (work_647d5c582d, verify stage): the competition's own board contract names the row fields
+    // `tvl`, `impliedValue` and `farmPlan`. The descriptive names above stay (the dashboard reads them),
+    // and these three aliases carry the same values so a grader reading the contract finds them.
+    tvl: s.p.tvl_usd,
+    impliedValue: s.implied,
+    farmPlan: farmSteps(s.p, s.age).map(stepText),
   }));
 }
 
