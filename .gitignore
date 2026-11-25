@@ -5,3 +5,12 @@ node_modules/
 # Reason: the graded run mounts it read-only at MAKEFUN_INPUT_DIR; committing it would
 # ship 248 KB of third-party snapshot data into a public repository for no gain.
 input/snapshot.json
+
+# The transcript bundle is a raw private session record, not a build artefact.
+# Reason: the verify stage (docs/verify-stage-work_647d5c582d.md) found it contains a
+# verbatim household conversation; publishing it to a public bounty repository is an
+# irreversible disclosure no instruction in this item authorises. It is supplied to the
+# grader from outside the tree via `check --transcripts transcripts.tar.gz`, which is
+# exactly how pass 4 measured 11 passed / 2 failed. Father's word is required before it
+# is ever committed. (declared-work discipline, work_fb464e49b9)
+transcripts.tar.gz
