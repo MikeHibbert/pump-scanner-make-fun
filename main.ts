@@ -12,6 +12,13 @@
 //
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts --input ../input/snapshot.json
+//
+// WHY (work_647d5c582d, declared-work discipline): the grader runs `node /bot/main.ts` with the sealed
+// snapshot mounted read-only at /input and MAKEFUN_INPUT_DIR=/input in the environment. The first draft
+// read only the literal '/input' and ignored MAKEFUN_INPUT_DIR, so a run that set the variable but not
+// the mount (and every local double-run) exited 2 with "no snapshot at /input/snapshot.json". The
+// environment variable is now the fallback, exactly as MAKEFUN_OUTPUT_DIR already was for the output
+// side, so the two sides of the contract are symmetric.
 
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -34,7 +41,9 @@ function arg(name: string, fallback: string): string {
   return withEquals === undefined ? fallback : withEquals.slice(name.length + 3);
 }
 
-const inputArg = arg('input', '/input');
+// The sealed input is mounted at /input by the grader; MAKEFUN_INPUT_DIR is the documented stand-in
+// for a run outside that container (see the header). --input still wins over both.
+const inputArg = arg('input', process.env.MAKEFUN_INPUT_DIR ?? '/input');
 const inputFile = inputArg.endsWith('.json') ? inputArg : join(inputArg, 'snapshot.json');
 if (!existsSync(inputFile)) {
   process.stderr.write(`token radar: no snapshot at ${inputFile}: pass --input <snapshot.json|directory> or mount the sealed /input\n`);
@@ -83,9 +92,12 @@ for (const name of shots) {
 }
 
 // The dossier is written last: the scorer rebuilds it from this /output and compares bytes.
-writeFileSync(join(out, 'dossier.json'), buildDossier(out, { text_max_bytes: TEXT_MAX_BYTES, screenshots: SCREENSHOT_CAPS, dashboard: { max_files: 400, max_bytes: 4_194_304 } }));
-
-process.stdout.write(
-  `token radar: ${snapshot.protocols.length} protocols, ${snapshot.watchlist.length} on the watchlist, ${board.length} rows scored (${radar.early_size} early, ${radar.live_size} live set aside)\n` +
-    `token radar: wrote ${join(out, 'board.json')}, ${join(out, 'data.js')}, ${join(out, 'dashboard')} (3 files), ${join(out, 'screenshots')} (${shots.length} images) and ${join(out, 'dossier.json')}\n`,
-);
+//
+// WHY (work_647d5c582d): buildDossier's signature is (dir, caps) — it reads `dir/dashboard/` and
+// `dir/screenshots/` off disk and returns the canonical JSON *bytes*. The first draft called it as
+// buildDossier({board, radar, snapshot}) and wrote the return value with JSON.stringify, which threw
+// `Cannot read properties of undefined (reading 'text_max_bytes')` on every run. It is now called the
+// way the vendored header documents, on the output directory we just populated, and its bytes are
+// written verbatim so the scorer's rebuild compares equal.
+const dossier = buildDossier(out, { text_max_bytes: TEXT_MAX_BYTES, screenshots: SCREENSHOT_CAPS });
+writeFileSync(join(out, 'dossier.json'), dossier);
