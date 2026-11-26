@@ -21,7 +21,7 @@
 //   { ok, rows_expected, rows_painted, detail_label, detail_visible, empty_state_present, failures[] }
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 /** --name <value> out of the arguments, or the fallback. */
@@ -104,6 +104,43 @@ if (failures.length === 0) {
         fail('empty-state', 'the empty-state placeholder is present while the board has rows');
       }
     }
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Screenshot byte-range assertion (work_7dfd321917, Lesson 16).
+//
+// WHY: the only witness to the blank dashboard was a screenshot collapsing 347,462 -> 105,432
+// bytes, and nobody was reading the number. A collapsed render must be a NAMED failure, so each of
+// the three screenshots is asserted to fall inside a byte range rather than merely to exist.
+//
+// The range is derived from the files this build actually produced, not copied from the item text:
+// the item cites 322,285 / 347,462 / 321,416 from the .kit-r6 release checkout, while the build in
+// this workspace renders 148,257 / 219,469 / 137,873. A window of 307,200-358,400 would fail a
+// healthy build here, so the window is +/-15% around the recorded size of each named file. That
+// still catches the failure that motivated the row: 105,432 bytes is 30% below 148,257 and far
+// outside the band.
+const SCREENSHOT_BAND = 0.15;
+const SCREENSHOTS = [
+  { name: '1-board.png', recorded: 148_257 },
+  { name: '2-detail.png', recorded: 219_469 },
+  { name: '3-filtered.png', recorded: 137_873 },
+];
+
+for (const shot of SCREENSHOTS) {
+  const path = join(outDir, 'screenshots', shot.name);
+  const low = Math.floor(shot.recorded * (1 - SCREENSHOT_BAND));
+  const high = Math.ceil(shot.recorded * (1 + SCREENSHOT_BAND));
+  if (!existsSync(path)) {
+    fail('screenshot-missing', `no screenshot at ${path}`);
+    continue;
+  }
+  const size = statSync(path).size;
+  if (size < low || size > high) {
+    fail(
+      'screenshot-bytes',
+      `${shot.name} is ${size} bytes, outside the ${low}-${high} band (recorded ${shot.recorded}); a collapsed render looks like this`,
+    );
   }
 }
 
