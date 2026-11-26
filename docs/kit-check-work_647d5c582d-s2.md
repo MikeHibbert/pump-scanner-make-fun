@@ -133,3 +133,54 @@ reports 52 files, 22,901,218 bytes at `2ed5356…`, confirming the kit is readin
 The precondition stands and is named first, as the item requires: **`No wallet on the account` still
 fails.** No entry of ours can be accepted until Father links a wallet, and the four Father gates (public
 repository, wallet link, entry signature, submission POST) remain uncrossed.
+
+## Verify-stage re-read (stage 2 of 3, third pass), live
+
+Re-run at the verify stage against the tree as it actually stands at HEAD
+`07069b54ea028b7d230487046fd93e408dbea465` — the commit stage 1 left behind, and the commit the kit's
+own `snapshot` and `commit_in_repo` lines name. `git status --short` printed nothing, so the tree is
+clean and nothing was left half-written by stage 1.
+
+Declared change: **this section only.** No code was touched, because the verify pass found nothing to
+correct — the entrypoint, the model, the dashboard and the bundle all behave as the earlier passes
+recorded.
+
+```
+cd entries/token-radar-01
+/opt/nvm/versions/node/v22.23.5/bin/node --version          # v22.23.5
+test -f main.ts && test -f LICENSE && echo ENTRY_SHAPE_OK   # ENTRY_SHAPE_OK
+MAKEFUN_INPUT_DIR=./input MAKEFUN_OUTPUT_DIR=./out \
+  /opt/nvm/versions/node/v22.23.5/bin/node main.ts          # exit 0
+node -e "require('./out/board.json').rows.length"           # rows 200
+/opt/nvm/versions/node/v22.23.5/bin/node /data/workspace/makefun/kit/cli/makefun.mjs check \
+  --kit /data/workspace/makefun/kit --repo . --transcripts transcripts.tar.gz   # exit 2
+```
+
+Tally re-read live: **11 passed, 2 failed, 7 skipped, 5 checked at submission** — unchanged, and the
+same two failures:
+
+- `thinking_reproduces` — the transcripts account for **0 of 337,566 counted lines (0.0%: 0 authored,
+  0 pasted)**, under the 30% required; `main.ts` has no authored line (80 counted: 0 pasted, 0 read,
+  80 absent).
+- `thinking_revised` — no file takes its final content from 2 or more messages that write or edit it.
+
+The counted-line total moved once more (337,258 → 337,566) because the snapshot now includes the
+submission-time record and the render witness; the ratio is unchanged at 0.0%, which is the honest
+reading. The `snapshot` check now reports **56 files, 22,921,460 bytes at `07069b5…`**, confirming the
+kit is reading the current commit rather than a stale one.
+
+The pipeline was re-run live on node22 and produced **200 rows**, top row `steakhouse-financial` — the
+same board the earlier passes measured, so the radar-2 breadth signal is still discriminating.
+
+The precondition stands and is named first, as the item requires: **`No wallet on the account` still
+fails.** The kit's `repo_owner` line asks for `.makefun/owner.json` naming a wallet on the account, and
+`thinking_committed` asks for the entry message to be signed over the bundle — both need a keypair only
+Father can supply. **No entry of ours can be accepted until Father links a wallet.** The four Father
+gates (public repository, wallet link, entry signature, submission POST) remain uncrossed, and this
+stage did not cross them.
+
+One further note the kit printed, recorded here because it bears on the two failures: this kit copy is
+**level 46** while make.fun is at **level 53**, and the kit itself warns that a kit below level 7 cannot
+see the hold on a handed-over entry. The two failures are therefore stated as the handed-over-session
+limit, and the remedy — running in a recorded client, which the kit names as Superbot — is Father's
+decision, not a build step.
