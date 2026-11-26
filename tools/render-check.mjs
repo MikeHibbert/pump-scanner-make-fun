@@ -103,6 +103,12 @@ if (failures.length === 0) {
       if (verdict.empty_state_present) {
         fail('empty-state', 'the empty-state placeholder is present while the board has rows');
       }
+      // The inverse direction (work_7dfd321917): when the board genuinely has no rows the page MUST
+      // show its empty-state placeholder. Without this, a page that paints nothing at all would pass
+      // the blank-board case by accident, and the row could never fail in the direction that matters.
+      if (expected === 0 && !verdict.empty_state_present) {
+        fail('empty-state-missing', 'the board has no rows and the page showed no empty-state placeholder');
+      }
     }
   }
 }
