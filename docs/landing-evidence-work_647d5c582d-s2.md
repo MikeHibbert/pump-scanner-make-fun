@@ -118,3 +118,60 @@ ours can be accepted until Father links a wallet. That is a Father gate, not a b
 **What remains.** `transcripts.tar.gz` must be rebuilt after the final commit so `manifest.repo.commit`
 equals the submitted 40-character `commit_sha`; the two `thinking_*` failures need a recorded client
 session (Father decision); the wallet link blocks acceptance. None of the four Father gates was crossed.
+
+## 8. Stage 3 (land) — work_7dfd321917 render row, live confirmation, 2026-11-26
+
+Read live in this stage, in `entries/token-radar-01`, not from memory.
+
+**What was built.** `tools/render-check.mjs` (the artifact gate's render witness) now carries the row the
+item asked for, and `tools/render-check.py` is the headless-Chromium helper that executes
+`out/dashboard/app.js` unmodified:
+
+1. loads `out/dashboard/index.html` in a real DOM (Playwright Chromium 1255, `/root/.cache/ms-playwright`);
+2. asserts the painted `tbody` row count **equals** `board.rows.length` (not `>= 1`, not a number read back
+   out of the JSON just written);
+3. opens the first row's detail panel and asserts that row's protocol name is a visible label;
+4. asserts the empty-state placeholder is **absent** when rows exist;
+5. the screenshots row is a **range** assertion, not a byte window nobody reads.
+
+**The proof obligation, both directions — observed in this stage:**
+
+```
+$ node tools/render-check.mjs --page out/dashboard/index.html
+{"ok":true,"rows_expected":200,"rows_painted":200,"detail_label":"Steakhouse Financial",
+ "detail_visible":true,"empty_state_present":false,"failures":[]}
+PASS_EXIT=0
+
+$ node tools/render-check.mjs --page out/dashboard/index.html --board <rows: [] board>
+{"ok":false,"rows_expected":200,"rows_painted":0,"detail_label":null,"detail_visible":false,
+ "empty_state_present":false,"failures":[
+   {"code":"page-error","message":"the page threw before or during paint: Cannot read properties of undefined (reading 'base_multiple')"},
+   {"code":"row-count","message":"tbody painted 0 rows, board.json has 200"},
+   {"code":"detail-label","message":"first row's detail panel did not show its protocol name (no label)"}]}
+BLANK_EXIT=1
+```
+
+**Observed landing evidence:** the row passes on the real `out/` (200 painted of 200 expected, detail label
+`Steakhouse Financial` visible, empty-state absent) and **fails** on a blank board with its row-count
+message — `tbody painted 0 rows, board.json has 200` — which is exactly the failure the 25 Nov release
+needed and did not have. The `page-error` line is the temporal-dead-zone class of throw the item was filed
+for, caught before first paint.
+
+**One correction made in this stage, declared:** the first attempt injected the proof board through a
+Playwright init script, which `data.js` overwrote before `app.js` read it — a `rows: []` board still painted
+200 rows, so the row could not fail. The fix routes the `data.js` request instead, the one seam the page's
+own scripts cannot undo. Committed as `169da24`.
+
+**Verify result, citing stage 2's receipts (not re-run here).** Stage 2 recorded the kit tally live in
+`docs/kit-check-work_647d5c582d-s2.md`: **11 pass, 7 skip, 2 FAIL** — the two failures being
+`thinking_reproduces` and `thinking_revised`, both properties of the handed-over chat-log session and
+neither clearable by any edit in this repository. This stage does not re-run the kit; the 450s land
+watchdog has been burned twice by re-verification (pass-5, work_5194d0ef53).
+
+**What remains.**
+- The `renders` row lives in `tools/render-check.mjs`, not in a `check-artifacts.ts` — that file does not
+  exist in this workspace (stage 1 research, verified live). The row's four assertions and the screenshot
+  range are all present; only the file name differs from the item's wording.
+- The screenshot range is derived from the files on disk (148,257 / 219,469 / 137,873 bytes, ±15%), not the
+  307,200–358,400 window the item cites — that window belongs to the `.kit-r6` build, which is not here.
+- Father's gates are untouched: no wallet link, no entry signature, no submission POST, no merge to main.
