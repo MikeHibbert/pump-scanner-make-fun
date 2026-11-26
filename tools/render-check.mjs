@@ -68,7 +68,13 @@ if (failures.length === 0) {
   // installed here (chromium-1255 under /root/.cache/ms-playwright). The helper prints one JSON
   // object; anything else on stdout is a harness failure, not a page failure.
   const helper = new URL('./render-check.py', import.meta.url).pathname;
-  const run = spawnSync('python3', [helper, '--page', pagePath], {
+  // --board (work_7dfd321917, proof obligation): the page reads window.RADAR from ../data.js, so
+  // feeding it a rows: [] board is the only way to prove the row can fail in the direction that
+  // matters. The helper injects the board before the page's own scripts run; app.js stays unmodified.
+  const boardArg = arg('board', null);
+  const helperArgs = [helper, '--page', pagePath];
+  if (boardArg) helperArgs.push('--board', resolve(boardArg));
+  const run = spawnSync('python3', helperArgs, {
     encoding: 'utf8',
     timeout: 90_000,
     env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '/root/.cache/ms-playwright' },

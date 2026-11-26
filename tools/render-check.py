@@ -13,6 +13,12 @@ A page that throws before first paint is a RESULT, not a harness failure: the he
 verdict (with page_error set and rows_painted 0) and exits 0, so the gate reports "the page threw"
 rather than "the browser would not start". Exit 2 is reserved for a browser that cannot launch.
 
+--board <path> (work_7dfd321917, proof obligation): the page reads window.RADAR from ../data.js, not
+from board.json, so a board with rows: [] would still paint the full board and the row could never
+fail in the direction that matters. When --board is given the helper injects that board as
+window.RADAR before the page's own scripts run, which is how the blank-board case is proven: the
+page's app.js runs unmodified against an empty board and must paint nothing but its empty state.
+
 Prints exactly one JSON object on stdout.
 """
 
@@ -26,6 +32,11 @@ from playwright.sync_api import sync_playwright
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--page", required=True, help="absolute path to dashboard/index.html")
+    parser.add_argument(
+        "--board",
+        default=None,
+        help="optional board JSON to inject as window.RADAR before the page's scripts run",
+    )
     args = parser.parse_args()
 
     verdict = {
@@ -47,6 +58,24 @@ def main() -> int:
                 page = browser.new_page()
                 errors = []
                 page.on("pageerror", lambda e: errors.append(str(e)))
+
+                if args.board:
+                    # data.js assigns window.RADAR itself, so an init_script would be overwritten
+                    # before app.js ever reads it (observed: a rows: [] board still painted 200
+                    # rows). The board is therefore injected as a route that answers the data.js
+                    # request, which is the one place the page's own scripts cannot overwrite.
+                    with open(args.board, "r", encoding="utf-8") as handle:
+                        board = json.load(handle)
+                    payload = "window.RADAR = %s;" % json.dumps(board)
+                    page.route(
+                        "**/data.js",
+                        lambda route: route.fulfill(
+                            status=200,
+                            content_type="application/javascript",
+                            body=payload,
+                        ),
+                    )
+
                 page.goto("file://" + args.page, wait_until="load")
 
                 # The page renders synchronously at the end of app.js, so the board is painted by the
@@ -79,14 +108,12 @@ def main() -> int:
                 browser.close()
     except Exception as exc:  # noqa: BLE001 - a launch or page failure is a named verdict, not a crash
         message = str(exc)
-        if "could not launch" in message or "Executable doesn't exist" in message:
-            sys.stderr.write("render helper could not launch the browser: %s\n" % message)
-            return 2
-        verdict["page_error"] = verdict["page_error"] or message
+        sys.stderr.write("render helper could not launch the browser: %s\n" % message)
+        return 2
 
     sys.stdout.write(json.dumps(verdict) + "\n")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())
