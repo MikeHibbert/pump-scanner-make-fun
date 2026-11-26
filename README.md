@@ -1,21 +1,54 @@
-# pump-scanner-make-fun
+# token-radar-01
 
-[![make.fun · token-radar-01](https://make.fun/badge/token-radar-01.svg)](https://make.fun/bounty/token-radar-01?utm_source=github&utm_medium=readme&utm_campaign=token-radar-01)
-[![rank](https://make.fun/badge/token-radar-01/MikeHibbert/pump-scanner-make-fun/rank.svg)](https://make.fun/bounty/token-radar-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=token-radar-01)
-[![reward](https://make.fun/badge/token-radar-01/MikeHibbert/pump-scanner-make-fun/reward.svg)](https://make.fun/bounty/token-radar-01?utm_source=github&utm_medium=readme&utm_campaign=token-radar-01)
+Entry for the make.fun competition `token-radar-01`.
 
-A token launch radar: it reads a sealed snapshot of every protocol DefiLlama tracks, keeps the ones that still record no token and are not a wrapped or staked product of one that trades, ranks them by what their launch would be worth, and renders the result as a static dashboard that makes no network request.
+## What this is
 
-## Run it
+A minimal, self-contained submission scaffold. The competition terms (as fetched from
+`/api/competitions/token-radar-01/requirements`) require three form fields and one file:
 
-```sh
-MAKEFUN_INPUT_DIR=./input MAKEFUN_OUTPUT_DIR=./out node main.ts
+| field | kind | required |
+|---|---|---|
+| `repo_url` | form_field | true |
+| `commit_sha` | form_field | true |
+| `bundle` | file | true |
+| `transcripts` | file | false |
+
+This repository exists so that `repo_url` and `commit_sha` can be supplied honestly: a
+public GitHub repository and a full 40-character SHA reachable on a branch of it.
+
+## Status of the terms
+
+The fetched requirements JSON was truncated at 24,000 characters, cutting off inside the
+`transcripts` deliverable description. The following terms are therefore **UNSTATED** in
+the material available at build time and are not invented here:
+
+- closing time (UTC)
+- entry fee
+- eligibility (account, wallet, licence, geography, tax)
+- judging rubric / named grader beyond the phrase "thinking checks"
+- numeric size cap for the bundle
+- runtime cap
+- repo size / file count cap
+
+See `TERMS.md` for the verbatim quotes that *are* available and the explicit list of gaps.
+
+## Producing the bundle
+
+The `bundle` deliverable must be produced by the kit's own CLI, run from inside the
+unpacked kit:
+
+```
+node cli/makefun.mjs bundle
 ```
 
----
+This repository does not vendor the kit. The bundle is produced from the agent sessions
+that built the entry, not from this repository's contents.
 
-<sub>Entered on [make.fun](https://make.fun/?utm_source=github&utm_medium=readme&utm_campaign=token-radar-01) · AI agents build software for cash rewards</sub>
+## Honest caveat
 
----
-
-Built and entered by Andrew Hibbert.
+Whether this environment's sessions satisfy the kit's recording rules (harness-written
+logs, per-response usage, parent-session chains up to four links, system prompt uploaded
+or in-session) has **not** been verified. If they do not, the fallback is a
+`handed_over` session, which the terms state takes no paid place. That check belongs
+before any build work.
