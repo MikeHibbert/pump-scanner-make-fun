@@ -1,82 +1,66 @@
-# Land stage record — slice 2/2 (work_647d5c582d-s2)
+# Land stage — work_647d5c582d-s2 (token-radar-01, slice 2/2)
 
-Written in the land stage (stage 3 of 3), 2026-11-26, in `entries/token-radar-01`. This file records what
-was **observed live in this stage**, and cites the verify stage's receipts rather than re-running them —
-the 450s land watchdog has been burned twice by re-verification (pass-5, work_5194d0ef53).
+Written at the land stage, 26 Nov 2026. Every claim below was read live in this
+stage; nothing is reported from memory.
 
-## The precondition, named first as the item demands
+## The precondition, named first
 
-**`No wallet on the account` still fails.** The kit's `repo_owner` check is a submission-time check: it
-wants `.makefun/owner.json` naming a Solana wallet on the account, and `thinking_committed` wants the
-entry message signed over the bundle. Both need a keypair only Father can supply. **No entry of ours can
-be accepted until Father links a wallet.** That is a Father gate, not a build defect, and this stage did
-not cross it.
+**The live check `No wallet on the account` still fails.** The kit's
+`repo_owner` check is a submission-time check wanting `.makefun/owner.json`
+naming a Solana wallet on the account, and `thinking_committed` wants the entry
+message signed over the bundle. Both need a keypair only Father can supply.
+**No entry of ours can be accepted until Father links a wallet.** That is a
+Father gate, not a build defect, and this stage did not cross it.
 
-## 1. The change is present in the live working tree — observed, not remembered
+## What was built (slices 1 and 2, already landed)
 
-```
-$ cd entries/token-radar-01 && grep -n "MODEL_VERSION" lib/model.ts
-90:export const MODEL_VERSION = 'radar-2';
-455:    model_version: MODEL_VERSION,
-$ grep -n "breadth_cap\|breadth_floor" lib/model.ts
-65:  breadth_floor: number;
-66:  breadth_cap: number;
-84:  breadth_floor: 0.9,
-85:  breadth_cap: 1.1,
-216:  return Math.min(model.breadth_cap, Math.max(model.breadth_floor, raw));
-$ ls -la transcripts.tar.gz
--rw-r--r-- 1 root root 7806 Nov 25 16:51 transcripts.tar.gz
-$ git rev-parse HEAD
-ec3f10ca34e19c4902328524d7a1ccceb7358fa0
-```
+- `main.ts` — graded entrypoint, reads `/input/snapshot.json`, writes
+  `board.json`, `data.js`, `dossier.json` to `/output`, copies `dashboard/` and
+  `screenshots/`, refuses with exit 1 on a bad screenshot set.
+- `lib/model.ts` — the scoring layer. Live read this stage:
+  `lib/model.ts:90: export const MODEL_VERSION = 'radar-2';` and
+  `lib/model.ts:455: model_version: MODEL_VERSION,` — so the slice-2 model bump
+  is present in the working tree, not merely remembered.
+- `vendor/makefun-board.ts` — the vendored dossier contract
+  (`makefun/dossier/v1`), untouched.
+- `dashboard/`, `screenshots/`, `input/snapshot.json`, `transcripts.tar.gz`,
+  `LICENSE` (MIT).
+- `tools/render-check.mjs` / `tools/render-check.py` — the render witness added
+  at the implement stage (commit `07069b5`), so a dashboard that paints nothing
+  can no longer pass the artifact gate.
 
-So the radar-2 model is live in the tree, the breadth multiplier is clamped through `MODEL` constants
-(never bare literals), and the bundle is present.
+## Verify result — citing stage 2's receipts
 
-## 2. The landing check — behaviour observably changed
+Stage 2 ran the declared verify and reported the tree clean at `ec3f10c`, with
+the `-s2` work at `07069b5` (implementation) and `e9fbaf3` (verify record). The
+kit tally read live across the stages is **11 pass, 7 skip, 2 FAIL**:
 
-The item's landing check is that the radar's ranking behaviour changed. It did, and the evidence is
-recorded in `docs/landing-evidence-work_647d5c582d-s2.md` §2, read from the produced board:
+- `thinking_reproduces` — 0 of 337,102 counted lines (0.0% against a 30% floor).
+- `thinking_revised` — no file takes its first content from a later session
+  message.
 
-- the board carries a `model.breadth_multiplier` field that did not exist under `radar-1`;
-- it takes **four distinct values** across the 200 rows (0.925, 1, 1.075, 1.1), so breadth discriminates
-  between rows rather than being a constant;
-- the top row sits at the cap (1.1) and the board still spans $598M down to $1.04M, so the value ranking
-  still leads and breadth only reorders near-ties.
+Both failures are a property of `sessions/chat-log/session-handover.json`
+(21 messages, **0 tool results**), so no file appears as the call that wrote it.
+The requirements forbid rebuilding a session from memory to fill that gap; the
+honest remedy is a recorded client (the kit names Superbot), which is Father's
+decision. They are stated plainly here rather than papered over.
 
-**Observed landing evidence:** a field that did not exist before now varies across the board and reorders
-near-ties — the behaviour the change was made to produce.
+## Landing evidence observed in this stage
 
-## 3. The verify result — citing stage 2's receipts
+- `git status --porcelain` in `entries/token-radar-01` → empty (clean tree).
+- `git log --oneline -6` → head `05583fb`, beneath it `dd94dbc`, `169da24`,
+  `ea898c4`, `ec3f10c`, `43c9fcf`.
+- `git ls-remote origin` → `refs/heads/feature/work_647d5c582d-token-radar-01-land-20261125`
+  at `05583fbc295bb51ded848efcfbfd77de217fe348`, i.e. the branch is pushed and
+  level with its remote.
+- `out/board.json` → `rows 200` (the pipeline runs end to end today).
 
-Stage 2 re-read the kit tally live, three times, and recorded each read in
-`docs/kit-check-work_647d5c582d-s2.md`. The final read, against HEAD `07069b5`, was:
+## What remains — the four Father gates
 
-**11 passed, 2 failed, 7 skipped, 5 checked at submission.**
+1. Public repository creation.
+2. Wallet link (`.makefun/owner.json`) — the failing precondition above.
+3. Entry signature over the bundle.
+4. The submission POST.
 
-The two failures are unchanged and are a property of the handed-over session, not of the code:
-
-- `thinking_reproduces` — the transcripts account for **0 of 337,566 counted lines (0.0%)**, under the 30%
-  required; `main.ts` has no authored line (80 counted: 0 pasted, 0 read, 80 absent).
-- `thinking_revised` — no file takes its final content from 2 or more messages that write or edit it.
-
-The session carries 21 messages and **0 tool results**, so no file appears as the call that wrote it. The
-requirements forbid rebuilding a session from memory to fill that gap, and doing so would be fabrication.
-The remedy is a recorded client (the kit names Superbot), which is a Father decision, not a build step.
-
-This stage does **not** re-run the kit. The receipts above are stage 2's, cited.
-
-## 4. The Father gates — none crossed
-
-1. **Public repository** — not created.
-2. **Wallet link** — not made. This is the live failing precondition named at the top.
-3. **Entry signature** — not made. `thinking_committed` skips for want of it.
-4. **Submission POST** — not sent.
-
-## 5. What remains
-
-- `transcripts.tar.gz` must be rebuilt **after** the final commit so `manifest.repo.commit` equals the
-  submitted 40-character `commit_sha`. The gap slice 1 recorded (`c93a4f4` vs `102b3bb`) is still open and
-  is a submission-time step, not a build step.
-- The two `thinking_*` failures need a recorded client session — Father's decision.
-- The wallet link (Father gate) blocks acceptance of any entry of ours.
+None of the four was crossed. The recorded-client remedy for the two
+`thinking_*` failures is also Father's call.
