@@ -81,3 +81,40 @@ Father can supply. **No entry of ours can be accepted until Father links a walle
   is a submission-time step, not a build step.
 - The two `thinking_*` failures need a recorded client session (Father decision).
 - The wallet link (Father gate) blocks acceptance of any entry.
+
+## 7. Stage 3 (land) — live confirmation, 2026-11-26
+
+Read live in this stage, in `entries/token-radar-01`, not from memory:
+
+```
+$ grep -n "MODEL_VERSION" lib/model.ts
+90:export const MODEL_VERSION = 'radar-2';
+$ grep -c "breadth" lib/model.ts
+34
+$ ls -la transcripts.tar.gz
+-rw-r--r-- 1 root root 7806 Nov 25 16:51 transcripts.tar.gz
+$ git status --porcelain
+ M tools/render-check.mjs
+ M tools/render-check.py
+```
+
+So the slice-2 model change is present in the live working tree (`radar-2` at line 90, 34 breadth
+references), and the only uncommitted files are the two render-witness tools, which are committed in this
+stage's checkpoint below.
+
+**Verify result, citing stage 2's receipts (not re-run here).** Stage 2 re-read the kit tally live and
+recorded **11 pass, 7 skip, 2 FAIL** in `docs/kit-check-work_647d5c582d-s2.md` and
+`docs/verify-work_647d5c582d-s2.md`, at commit `07069b5`. This stage does not re-run the kit: the 450s
+land watchdog has been burned twice by re-verification (pass-5, work_5194d0ef53).
+
+**Landing evidence, stated explicitly.** The behaviour observably changed: the produced board carries
+`model.breadth_multiplier`, which did not exist under `radar-1`, and it takes four distinct values across
+the 200 rows (0.925, 1, 1.075, 1.1) — breadth discriminates rather than sitting constant, the top row sits
+at the cap (1.1), and the board still spans $598M down to $1.04M.
+
+**The precondition, named first as the item demands.** `No wallet on the account` still fails. No entry of
+ours can be accepted until Father links a wallet. That is a Father gate, not a build defect.
+
+**What remains.** `transcripts.tar.gz` must be rebuilt after the final commit so `manifest.repo.commit`
+equals the submitted 40-character `commit_sha`; the two `thinking_*` failures need a recorded client
+session (Father decision); the wallet link blocks acceptance. None of the four Father gates was crossed.
