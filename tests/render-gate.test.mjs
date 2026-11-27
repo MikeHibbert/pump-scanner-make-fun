@@ -100,8 +100,14 @@ test('a blank board injected into the page makes the renders row FAIL (not pass 
   if (!HAVE_OUT) return t.skip('no out/ build in this checkout - run the build first');
   const dir = scratchOut();
   try {
+    // WHY (27 Nov 2026): the page reads window.RADAR from ../data.js, not from board.json, and
+    // app.js needs the whole board object (model, live) before it can paint. A rows-only fixture
+    // ({rows: []}) threw in the model maths before reaching the empty state, so this case proved
+    // nothing about the gate. The blank board is the page's own board with its rows removed.
+    const dataJs = readFileSync(join(OUT, 'data.js'), 'utf8');
+    const pageBoard = JSON.parse(dataJs.slice(dataJs.indexOf('{'), dataJs.lastIndexOf('}') + 1));
     const blankBoard = join(dir, 'blank-board.json');
-    writeFileSync(blankBoard, JSON.stringify({ rows: [] }), 'utf8');
+    writeFileSync(blankBoard, JSON.stringify({ ...pageBoard, rows: [] }), 'utf8');
     const result = runRenderCheck(dir, ['--board', blankBoard]);
     if (browserUnavailable(result)) {
       return t.skip(`browser unavailable: ${result.stderr || 'render helper could not launch'}`);
@@ -114,6 +120,40 @@ test('a blank board injected into the page makes the renders row FAIL (not pass 
     assert.ok(
       codes.includes('row-count'),
       `expected a named row-count failure, got ${JSON.stringify(codes)}`,
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// Case 2b - a build whose own board has no rows must FAIL, not pass on a vacuous 0 === 0.
+//
+// WHY (work_7dfd321917 follow-up, 27 Nov 2026): when out/board.json itself is empty, equality
+// compares 0 to 0 and passes, so a build that painted nothing could be ticked green. Zero rows is
+// a named row-count failure; the empty-state rule alone cannot carry it, because the page can show
+// an empty state and still have produced nothing of value.
+// ---------------------------------------------------------------------------------------------
+test('an out/ board with no rows FAILS the renders row instead of passing 0 === 0', (t) => {
+  if (!HAVE_OUT) return t.skip('no out/ build in this checkout - run the build first');
+  const dir = scratchOut();
+  try {
+    const dataJs = readFileSync(join(OUT, 'data.js'), 'utf8');
+    const pageBoard = JSON.parse(dataJs.slice(dataJs.indexOf('{'), dataJs.lastIndexOf('}') + 1));
+    const blank = join(dir, 'blank-page-board.json');
+    writeFileSync(blank, JSON.stringify({ ...pageBoard, rows: [] }), 'utf8');
+    writeFileSync(join(dir, 'board.json'), JSON.stringify({ rows: [] }), 'utf8');
+    const result = runRenderCheck(dir, ['--board', blank]);
+    if (browserUnavailable(result)) {
+      return t.skip(`browser unavailable: ${result.stderr || 'render helper could not launch'}`);
+    }
+    assert.equal(result.verdict.rows_expected, 0, 'this case is only meaningful with an empty expected board');
+    assert.equal(result.verdict.rows_painted, 0, 'the page must paint no rows for an empty board');
+    assert.equal(result.status, 1, 'an empty board must not pass the renders row');
+    const codes = (result.verdict.failures || []).map((f) => f.code);
+    assert.ok(
+      codes.includes('row-count'),
+      `expected a named row-count failure on an empty board, got ${JSON.stringify(codes)}`,
     );
   } finally {
     rmSync(dir, { recursive: true, force: true });

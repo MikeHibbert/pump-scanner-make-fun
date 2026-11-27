@@ -100,6 +100,13 @@ if (failures.length === 0) {
       if (painted.page_error) {
         fail('page-error', `the page threw before or during paint: ${painted.page_error}`);
       }
+      // WHY (work_7dfd321917 follow-up, 27 Nov 2026): with an empty board the equality check is
+      // vacuous - 0 !== 0 is false - so a --board with rows: [] passed the row gate, and a build
+      // that painted nothing could still be ticked green. The board the program wrote must have
+      // rows; zero rows is a named failure, never a pass.
+      if (expected === 0) {
+        fail('row-count', 'the board has no rows: an empty board cannot prove the dashboard paints anything');
+      }
       if (painted.rows_painted !== expected) {
         fail('row-count', `tbody painted ${painted.rows_painted} rows, board.json has ${expected}`);
       }

@@ -42,8 +42,18 @@ unpacked kit:
 node cli/makefun.mjs bundle
 ```
 
-This repository does not vendor the kit. The bundle is produced from the agent sessions
-that built the entry, not from this repository's contents.
+This repository does not vendor the kit: the supplied kit files (`RULES.txt`, `cli/`,
+`competition.yaml`, `harness/`, `starter/`, `input/` and `kit.json`) are byte-identical to the
+checkout at `/data/workspace/makefun/kit`, which is where the CLI runs from:
+
+```
+node /data/workspace/makefun/kit/cli/makefun.mjs check --kit /data/workspace/makefun/kit --repo . --worktree
+```
+
+Keeping them out of this repository is deliberate: repo-scoped checks refuse a tree with the kit
+at its root, and the judge's dossier reads the first source files it finds - which would otherwise
+be the kit's own 100 KB RULES.txt and 18 MB CLI rather than this entry. The bundle is produced from
+the agent sessions that built the entry, not from this repository's contents.
 
 ## Honest caveat
 

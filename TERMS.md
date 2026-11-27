@@ -36,19 +36,41 @@ The kit's `bundle` command is described as:
 
 This is a pre-submission checker, not the grader.
 
+## Deadline and repository age, as stated by the site's own checker (27 Nov 2026)
+
+The requirements fetch was truncated, but the kit's `check` command states the dates it enforces.
+Run on this repository (kit level 46):
+
+`makefun check --kit /data/workspace/makefun/kit --repo . --worktree`
+
+> "push it, and submit that new commit's sha before 2026-12-14T10:00:00.000Z"
+
+> "GitHub's creation time of the repository must be at or after the opening, 2026-11-14T10:00:00.000Z"
+
+This closes the `closing_time_utc` gap: the closing time is stated by the checker, not inferred from
+the truncated fetch. The repository-age rule is new information the fetch did not carry: it means a
+repository created before 2026-11-14T10:00:00.000Z is refused at intake whatever it contains.
+
 ## Terms NOT stated in the available text
 
 Each of the following is absent from the fetched material. They are recorded as gaps,
 not filled in:
 
-- closing time (UTC) — no `deadline` / `closes_at` field visible; `status` is `"open"`
-- entry fee
-- eligibility: account criteria, wallet, licence, geography, tax
-- judging rubric, scoring formula, named human judges
-- numeric bundle size cap (the phrase "over the size cap" appears; the value does not)
-- runtime cap
-- repo size / file count cap
-- submit endpoint URL (the requirements endpoint was fetched, not the submit page)
+Each key below is the exact `unstated_terms` entry in `submission.json`, so the check that pins
+this file names the same gap this file records. Nothing here is inferred from elsewhere.
+
+- `entry_fee` — no fee field and no sentence about a fee in the visible text
+- `eligibility_account` — the eligibility rules sit past the truncation point
+- `eligibility_wallet` — same; no wallet requirement visible
+- `eligibility_licence` — same; no licence requirement visible
+- `eligibility_geography` — same; no geography restriction visible
+- `eligibility_tax` — same; no tax attestation visible
+- `judging_rubric` — "thinking checks" is named; the rubric and scoring formula are not
+- `named_grader` — no judge or grader is named in the visible text
+- `bundle_size_cap_bytes` — the phrase "over the size cap" appears; the value does not
+- `runtime_cap` — no runtime limit visible
+- `repo_size_cap` — no repo size / file count cap visible
+- `submit_endpoint_url` — the requirements endpoint was fetched, not the submit page
 
 ## To close the gaps
 

@@ -45,7 +45,6 @@
     }
   },
   "unstated_terms": [
-    "closing_time_utc",
     "entry_fee",
     "eligibility_account",
     "eligibility_wallet",
