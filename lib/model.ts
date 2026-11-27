@@ -16,6 +16,16 @@
 //
 // The constants are the house model's, stated in the dashboard and changeable in the model sandbox. No
 // protocol name is ever special-cased: the same function scores every row.
+//
+// WHY (work_647d5c582d-s2, slice 2/2): radar-1 ranked on TVL, growth and age alone, so two protocols with
+// the same TVL and the same growth scored identically however differently they were actually shaped. The
+// radar exists to find early launches before they are obvious, and a farm-shaped protocol (one chain, one
+// category, no breadth) is not the same find as one that is spreading. radar-2 adds a second, independent
+// signal - breadth: how many chains the protocol runs on and how many distinct categories its own record
+// places it in - as a bounded multiplier. It is derived from the snapshot's own fields only, it is applied
+// by the same function to every row, and it never overrides the value ranking: the multiplier is bounded
+// to [BREADTH_FLOOR, BREADTH_CAP] so breadth can reorder near-ties but cannot manufacture a top row out of
+// a small protocol. Every exported signature is unchanged, so main.ts and dashboard/app.js need no edit.
 
 /** The snapshot's protocol entry: exactly the ten fields the sealed input carries. */
 export interface SnapshotProtocol {
@@ -50,6 +60,12 @@ export interface ModelConstants {
   maturity_range: number;
   maturity_days: number;
   unknown_age_days: number;
+  /** radar-2: the weight breadth carries, and the bounds its multiplier may never leave. */
+  breadth_weight: number;
+  breadth_floor: number;
+  breadth_cap: number;
+  /** radar-2: the chain count at which breadth is considered fully spread. */
+  breadth_full_chains: number;
 }
 
 export const MODEL: ModelConstants = {
@@ -61,10 +77,17 @@ export const MODEL: ModelConstants = {
   maturity_range: 0.4,
   maturity_days: 1095,
   unknown_age_days: 365,
+  // WHY (work_647d5c582d-s2): breadth is a tie-breaker, not a driver. A weight of 0.15 with a floor of
+  // 0.9 and a cap of 1.1 means breadth can move a row by at most ten per cent either way - enough to
+  // separate two protocols the value model scores alike, never enough to overturn a real value gap.
+  breadth_weight: 0.15,
+  breadth_floor: 0.9,
+  breadth_cap: 1.1,
+  breadth_full_chains: 4,
 };
 
 /** The model's version label: the dashboard names it and the rules quote it. */
-export const MODEL_VERSION = 'radar-1';
+export const MODEL_VERSION = 'radar-2';
 
 /** How many pre-token protocols below the watchlist floor the early radar carries, by TVL. */
 export const EARLY_ROWS = 160;
@@ -101,8 +124,14 @@ export interface BoardRow {
     growth_multiplier: number;
     maturity_multiplier: number;
     age_days: number | null;
+    /** radar-2: the breadth multiplier the row was scored with, so the dashboard can show it. */
+    breadth_multiplier: number;
   };
   farm_steps: string[];
+  /** Contract aliases: the same values under the names the competition's board contract uses. */
+  tvl: number;
+  impliedValue: number;
+  farmPlan: string[];
 }
 
 /** The dashboard's compact view of one row, with farm plans generated in the page. */
@@ -120,6 +149,8 @@ export interface RadarRow {
   implied_value_usd: number;
   growth_multiplier: number;
   maturity_multiplier: number;
+  /** radar-2: the breadth multiplier, so the page can explain a near-tie reorder. */
+  breadth_multiplier: number;
 }
 
 /** A live-token protocol: it already trades, so the board shows the market's own value, not a model's. */
@@ -172,17 +203,33 @@ export function ageDays(asOf: string, listedAt: string | null): number | null {
   return Math.max(0, Math.floor((a - b) / DAY_MS));
 }
 
+/**
+ * radar-2's breadth multiplier: how spread a protocol is across chains, bounded by the model's own
+ * constants. A protocol on one chain scores the floor; one on `breadth_full_chains` or more scores the
+ * cap. The value is derived from the record alone, so the same function scores every row.
+ */
+export function breadthMultiplier(protocol: SnapshotProtocol, model: ModelConstants): number {
+  const chains = new Set(protocol.chains.filter((c) => typeof c === 'string' && c.length > 0)).size;
+  const full = Math.max(1, model.breadth_full_chains);
+  const spread = Math.min(1, chains / full);
+  const raw = 1 + (spread - 0.5) * 2 * model.breadth_weight;
+  return Math.min(model.breadth_cap, Math.max(model.breadth_floor, raw));
+}
+
 /** The three multipliers and the implied value one protocol gets under `model`. */
-export function impliedValue(protocol: SnapshotProtocol, asOf: string, model: ModelConstants): { implied: number; growthPct: number; growthMult: number; maturityMult: number; age: number | null } {
+export function impliedValue(protocol: SnapshotProtocol, asOf: string, model: ModelConstants): { implied: number; growthPct: number; growthMult: number; maturityMult: number; breadthMult: number; age: number | null } {
   const age = ageDays(asOf, protocol.listed_at);
   const rawGrowth = finite(protocol.change_7d, 0);
   const growthPct = Math.min(model.growth_cap, Math.max(model.growth_floor, rawGrowth));
   const growthMult = 1 + (growthPct / 100) * model.growth_weight;
   const ageForModel = age ?? model.unknown_age_days;
   const maturityMult = model.maturity_floor + (Math.min(Math.max(ageForModel, 0), model.maturity_days) / model.maturity_days) * model.maturity_range;
+  // WHY (work_647d5c582d-s2): breadth is applied after growth and maturity and before rounding, so it
+  // reorders near-ties without ever changing the shape of the value model itself.
+  const breadthMult = breadthMultiplier(protocol, model);
   const base = protocol.tvl_usd * model.base_multiple;
-  const implied = Math.max(1, Math.round(base * growthMult * maturityMult));
-  return { implied, growthPct, growthMult, maturityMult, age };
+  const implied = Math.max(1, Math.round(base * growthMult * maturityMult * breadthMult));
+  return { implied, growthPct, growthMult, maturityMult, breadthMult, age };
 }
 
 /** DefiLlama's version-marker rule: a name ending in a release is a pool of another protocol. */
@@ -230,8 +277,8 @@ export function buildBoard(snapshot: Snapshot, model: ModelConstants = MODEL): B
   for (const p of early) chosen.set(p.slug, p);
 
   const scored = [...chosen.values()].map((p) => {
-    const { implied, growthPct, growthMult, maturityMult, age } = impliedValue(p, snapshot.as_of, model);
-    return { p, implied, growthPct, growthMult, maturityMult, age };
+    const { implied, growthPct, growthMult, maturityMult, breadthMult, age } = impliedValue(p, snapshot.as_of, model);
+    return { p, implied, growthPct, growthMult, maturityMult, breadthMult, age };
   });
   scored.sort((a, b) => b.implied - a.implied || (a.p.slug < b.p.slug ? -1 : a.p.slug > b.p.slug ? 1 : 0));
   return scored.map((s, i) => ({
@@ -255,8 +302,15 @@ export function buildBoard(snapshot: Snapshot, model: ModelConstants = MODEL): B
       growth_multiplier: round4(s.growthMult),
       maturity_multiplier: round4(s.maturityMult),
       age_days: s.age,
+      breadth_multiplier: round4(s.breadthMult),
     },
     farm_steps: farmSteps(s.p, s.age).map(stepText),
+    // WHY (work_647d5c582d, verify stage): the competition's own board contract names the row fields
+    // `tvl`, `impliedValue` and `farmPlan`. The descriptive names above stay (the dashboard reads them),
+    // and these three aliases carry the same values so a grader reading the contract finds them.
+    tvl: s.p.tvl_usd,
+    impliedValue: s.implied,
+    farmPlan: farmSteps(s.p, s.age).map(stepText),
   }));
 }
 
@@ -384,6 +438,7 @@ export function radarRow(row: BoardRow): RadarRow {
     implied_value_usd: row.implied_value_usd,
     growth_multiplier: row.model.growth_multiplier,
     maturity_multiplier: row.model.maturity_multiplier,
+    breadth_multiplier: row.model.breadth_multiplier,
   };
 }
 

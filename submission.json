@@ -1,0 +1,66 @@
+{
+  "competition": "token-radar-01",
+  "deliverables": {
+    "repo_url": {
+      "kind": "form_field",
+      "required": true,
+      "shape": "https://github.com/<owner>/<repo>",
+      "value": null,
+      "note": "Set to the public repository URL at submit time."
+    },
+    "commit_sha": {
+      "kind": "form_field",
+      "required": true,
+      "shape": "full 40-character sha, reachable on a branch of repo_url",
+      "value": null,
+      "note": "Set to the full 40-char SHA of the entered commit at submit time."
+    },
+    "bundle": {
+      "kind": "file",
+      "required": true,
+      "shape": "one .tar.gz produced by `node cli/makefun.mjs bundle` run from inside the unpacked kit",
+      "value": null,
+      "note": "Produced from the agent sessions that built the entry; not stored in this repo."
+    },
+    "transcripts": {
+      "kind": "file",
+      "required": false,
+      "repeatable": true,
+      "shape": "loose transcript files, alternative to bundle",
+      "accepted_extensions": [
+        ".jsonl",
+        ".json",
+        ".md",
+        ".sse",
+        ".db",
+        ".sqlite",
+        ".sqlite3",
+        ".vscdb",
+        ".jsonl.gz",
+        ".jsonl.zst",
+        ".jsonl.zstd"
+      ],
+      "value": null,
+      "note": "Use instead of bundle, not in addition to it."
+    }
+  },
+  "unstated_terms": [
+    "entry_fee",
+    "eligibility_account",
+    "eligibility_wallet",
+    "eligibility_licence",
+    "eligibility_geography",
+    "eligibility_tax",
+    "judging_rubric",
+    "named_grader",
+    "bundle_size_cap_bytes",
+    "runtime_cap",
+    "repo_size_cap",
+    "submit_endpoint_url"
+  ],
+  "source": {
+    "endpoint": "/api/competitions/token-radar-01/requirements",
+    "truncated_at_chars": 24000,
+    "truncation_point": "mid-sentence inside the transcripts deliverable description"
+  }
+}
